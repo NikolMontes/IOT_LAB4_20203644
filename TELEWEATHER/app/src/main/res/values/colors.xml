@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="title">#44A5A0</color>
+    <color name="tele_weather_background">#F0FFF8</color>
+</resources>
