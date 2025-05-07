@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">TELE-WEATHER</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="location">Ubicación</string>
+    <string name="pronosticos">Pronósticos</string>
+    <string name="deportes">Deportes</string>
+    <string name="titulo_busqueda_ubicaciones">Búsqueda de Locaciones</string>
+    <string name="titulo_busqueda_deportes">Pronóstico Futuro</string>
+    <string name="titulo_busqueda_pronosticos">Pronósticos del Clima</string>
 </resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/locationFragment"
+        android:title="Ubicaciones"/>
+    <!--android:icon="@drawable/ic_location"-->
+    <item
+        android:id="@+id/pronosticosFragment"
+        android:title="Pronósticos"/>
+    <!--        android:icon="@drawable/ic_weather"-->
+    <item
+        android:id="@+id/deportesFragment"
+        android:title="Deportes"/>
+    <!--        android:icon="@drawable/ic_sports"-->
+</menu>
