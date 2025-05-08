@@ -10,6 +10,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 import androidx.annotation.NonNull;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -35,8 +36,11 @@ public class AppActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        // Configurar Navigation Component
-        navController = Navigation.findNavController(this, R.id.nav_host_fragment);
+        // Configurar Navigation
+        NavHostFragment navHostFragment =
+                (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
+
+        navController = navHostFragment.getNavController();
 
         // Configurar Bottom Navigation con Navigation Component
         NavigationUI.setupWithNavController(binding.bottomNavigationView, navController);

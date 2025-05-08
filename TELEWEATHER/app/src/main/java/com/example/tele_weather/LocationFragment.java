@@ -1,5 +1,7 @@
 package com.example.tele_weather;
 
+import static android.app.ProgressDialog.show;
+
 import android.annotation.SuppressLint;
 
 import androidx.annotation.NonNull;
@@ -7,8 +9,13 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.Activity;
+import android.net.DnsResolver;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,31 +24,32 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
+import com.example.tele_weather.bean.LocationModel;
 import com.example.tele_weather.databinding.FragmentLocationBinding;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import retrofit2.Callback;
+import retrofit2.Call;
+import retrofit2.Response;
+
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
  */
 public class LocationFragment extends Fragment {
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
-    private static final boolean AUTO_HIDE = true;
+    private EditText etSearchLocation;
+    private Button btnSearch;
+    private RecyclerView recyclerView;
+    private LocationAdapter adapter;
+    private List<LocationModel> locationList = new ArrayList<>();
 
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
-
-    /**
-     * Some older devices needs a small delay between UI widget updates
-     * and a change of the status and navigation bar.
-     */
-    private static final int UI_ANIMATION_DELAY = 300;
     private final Handler mHideHandler = new Handler(Looper.myLooper());
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -85,38 +93,57 @@ public class LocationFragment extends Fragment {
         }
     };
     private boolean mVisible;
-    private final Runnable mHideRunnable = new Runnable() {
-        @Override
-        public void run() {
-            hide();
-        }
-    };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
 
     private FragmentLocationBinding binding;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView( LayoutInflater inflater,
+                              ViewGroup container,
+                              Bundle savedInstanceState) {
 
         binding = FragmentLocationBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        View view = binding.getRoot();
 
+        adapter = new LocationAdapter(locationList, idLocation -> {
+            Bundle bundle = new Bundle();
+            bundle.putString("idLocation", idLocation);
+
+            NavController navController = Navigation.findNavController(requireView());
+            navController.navigate(R.id.pronosticosFragment, bundle);
+        });
+        binding.rvLocations.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.rvLocations.setAdapter(adapter);
+
+        binding.btnSearch.setOnClickListener(v -> {
+            String query = binding.etSearchLocation.getText().toString().trim();
+            if (!query.isEmpty()) {
+                buscarLocaciones(query);
+            }
+        });
+
+        return view;
+    }
+
+    private void buscarLocaciones(String query) {
+        WeatherApiService apiService = RetrofitInstance.getRetrofit().create(WeatherApiService.class);
+        Call<List<LocationModel>> call = apiService.getLocations(query);
+
+        call.enqueue(new Callback<List<LocationModel>>() {
+            @Override
+            public void onResponse(Call<List<LocationModel>> call, Response<List<LocationModel>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    locationList.clear();
+                    locationList.addAll(response.body());
+                    adapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<LocationModel>> call, Throwable t) {
+                Toast.makeText(getContext(), "Error al conectar con la API", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -126,83 +153,12 @@ public class LocationFragment extends Fragment {
 
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (getActivity() != null && getActivity().getWindow() != null) {
-            getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-        }
-
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-        delayedHide(100);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (getActivity() != null && getActivity().getWindow() != null) {
-            getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-
-            // Clear the systemUiVisibility flag
-            getActivity().getWindow().getDecorView().setSystemUiVisibility(0);
-        }
-        show();
-    }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         mContentView = null;
         mControlsView = null;
-    }
-
-    private void toggle() {
-        if (mVisible) {
-            hide();
-        } else {
-            show();
-        }
-    }
-
-    private void hide() {
-        // Hide UI first
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.hide();
-        }
-        mControlsView.setVisibility(View.GONE);
-        mVisible = false;
-
-        // Schedule a runnable to remove the status and navigation bar after a delay
-        mHideHandler.removeCallbacks(mShowPart2Runnable);
-        mHideHandler.postDelayed(mHidePart2Runnable, UI_ANIMATION_DELAY);
-    }
-
-    @SuppressLint("InlinedApi")
-    private void show() {
-        // Show the system bar
-        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-        mVisible = true;
-
-        // Schedule a runnable to display UI elements after a delay
-        mHideHandler.removeCallbacks(mHidePart2Runnable);
-        mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.show();
-        }
-    }
-
-    /**
-     * Schedules a call to hide() in delay milliseconds, canceling any
-     * previously scheduled calls.
-     */
-    private void delayedHide(int delayMillis) {
-        mHideHandler.removeCallbacks(mHideRunnable);
-        mHideHandler.postDelayed(mHideRunnable, delayMillis);
     }
 
     @Nullable

@@ -2,11 +2,26 @@ package com.example.tele_weather;
 
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
+
+import com.example.tele_weather.bean.PronosticoModel;
+import com.example.tele_weather.databinding.FragmentPronosticosBinding;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -17,6 +32,10 @@ public class PronosticosFragment extends Fragment {
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
+    private FragmentPronosticosBinding binding;
+    private PronosticoAdapter adapter;
+    private List<PronosticoModel.ForecastDay> forecastList = new ArrayList<>();
+    private static final int DEFAULT_DAYS = 14;
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
 
@@ -58,7 +77,79 @@ public class PronosticosFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_pronosticos, container, false);
+        binding = FragmentPronosticosBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // Setup RecyclerView
+        adapter = new PronosticoAdapter(forecastList);
+        binding.rvLocations.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.rvLocations.setAdapter(adapter);
+
+        // Ver si vino un idLocation desde LocationFragment
+        Bundle args = getArguments();
+        if (args != null && args.containsKey("idLocation")) {
+            String idLocation = args.getString("idLocation");
+            obtenerPronostico(idLocation, DEFAULT_DAYS);
+        }
+
+        // Configurar búsqueda manual
+        binding.btnSearch.setOnClickListener(v -> {
+            String id = binding.etIdLocation.getText().toString().trim();
+            String diasStr = binding.etDiaInteres.getText().toString().trim();
+
+            if (TextUtils.isEmpty(id) || TextUtils.isEmpty(diasStr)) {
+                Toast.makeText(getContext(), "Completa ambos campos", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int dias;
+            try {
+                dias = Integer.parseInt(diasStr);
+                if (dias < 1 || dias > 14) {
+                    Toast.makeText(getContext(), "Máximo 14 días", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(getContext(), "Número inválido", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            obtenerPronostico(id, dias);
+        });
+    }
+
+    private void obtenerPronostico(String idLocation, int dias) {
+        WeatherApiService apiService = RetrofitInstance.getRetrofit().create(WeatherApiService.class);
+        Call<PronosticoModel> call = apiService.getForecast("id:" + idLocation, dias);
+
+        call.enqueue(new Callback<PronosticoModel>() {
+            @Override
+            public void onResponse(Call<PronosticoModel> call, Response<PronosticoModel> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    forecastList.clear();
+                    forecastList.addAll(response.body().getForecast().getForecastday());
+                    adapter.notifyDataSetChanged();
+                } else {
+                    Toast.makeText(getContext(), "Error al obtener datos", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<PronosticoModel> call, Throwable t) {
+                Toast.makeText(getContext(), "Error de red", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }
