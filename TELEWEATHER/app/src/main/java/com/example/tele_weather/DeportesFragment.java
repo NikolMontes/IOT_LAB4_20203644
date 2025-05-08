@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -53,8 +54,8 @@ public class DeportesFragment extends Fragment {
 
         // Configurar RecyclerView
         adapter = new DeporteAdapter(footballMatches);
-        binding.rvLocations.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.rvLocations.setAdapter(adapter);
+        binding.rvDeportes.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.rvDeportes.setAdapter(adapter);
 
         // Botón buscar
         binding.btnSearch.setOnClickListener(v -> {
@@ -72,16 +73,31 @@ public class DeportesFragment extends Fragment {
         WeatherApiService apiService = RetrofitInstance.getRetrofit().create(WeatherApiService.class);
         Call<SportModel> call = apiService.getFootballMatches(location);
 
+        Log.d("DEPORTES", "Entró al onResponse");
         call.enqueue(new Callback<SportModel>() {
             @Override
             public void onResponse(Call<SportModel> call, Response<SportModel> response) {
                 if (response.isSuccessful() && response.body() != null) {
+                    Log.d("DEPORTES", "Respuesta exitosa");
                     footballMatches.clear();
-                    if (response.body().getFootball() != null && response.body().getFootball().getMatch() != null) {
-                        footballMatches.addAll(response.body().getFootball().getMatch());
+                    List<SportModel.Match> partidos = response.body()
+                            .getFootball();
+
+                    if (partidos != null && !partidos.isEmpty()) {
+                        Log.d("DEPORTES", "Se recibieron " + partidos.size() + " partidos");
+
+                        footballMatches.addAll(partidos);
+                        adapter.notifyDataSetChanged();
+
+                        for (SportModel.Match m : partidos) {
+                            Log.d("PARTIDO", m.getMatch() + " - " + m.getStart());
+                        }
+                    } else {
+                        Log.d("DEPORTES", "No hay partidos de fútbol en la respuesta.");
                     }
-                    adapter.notifyDataSetChanged();
+
                 } else {
+                    Log.e("DEPORTES", "Respuesta fallida o nula: " + response.code());
                     Toast.makeText(getContext(), "No se encontraron partidos", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -89,6 +105,7 @@ public class DeportesFragment extends Fragment {
             @Override
             public void onFailure(Call<SportModel> call, Throwable t) {
                 Toast.makeText(getContext(), "Error de red", Toast.LENGTH_SHORT).show();
+                Log.e("DEPORTES", "Fallo en la red: " + t.getMessage(), t);
             }
         });
     }

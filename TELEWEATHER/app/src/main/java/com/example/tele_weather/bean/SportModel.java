@@ -1,20 +1,14 @@
 package com.example.tele_weather.bean;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 public class SportModel {
-    private Football football;
+    private List<Match> football;
 
-    public Football getFootball() {
+    public List<Match> getFootball() {
         return football;
-    }
-
-    public static class Football {
-        private List<Match> match;
-
-        public List<Match> getMatch() {
-            return match;
-        }
     }
 
     public static class Match {
@@ -22,13 +16,14 @@ public class SportModel {
         private String country;
         private String tournament;
         private String start;
-        private String match;
+        @SerializedName("match")
+        private String matchName;
 
         public String getStadium() { return stadium; }
         public String getCountry() { return country; }
         public String getTournament() { return tournament; }
         public String getStart() { return start; }
-        public String getMatch() { return match; }
+        public String getMatch() { return matchName; }
     }
 }
 
